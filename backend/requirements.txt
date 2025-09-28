@@ -1,41 +1,41 @@
 # FastAPI and Web Framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-multipart==0.0.12
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 
 # Database and Storage
-supabase==2.0.2
+supabase==2.9.1
 psycopg2-binary==2.9.9
 
 # HTTP Client for PayPal and external APIs
-aiohttp==3.9.1
+aiohttp==3.10.11
 
 # Audio Processing
-gtts==2.4.0
+gtts==2.5.3
 pydub==0.25.1
 
 # Basic Video Processing
-opencv-python-headless==4.8.1.78
+opencv-python-headless==4.10.0.84
 moviepy==1.0.3
 
 # Image Processing
-Pillow>=8.3.2,<10.1.0
+Pillow==11.0.0
 
 # Translation
 deep-translator==1.11.4
 
 # File Handling
-aiofiles==23.2.1
+aiofiles==24.1.0
 
 # Utilities
-python-dotenv==1.0.0
-requests==2.31.0
+python-dotenv==1.0.1
+requests==2.32.3
 
 # Development and Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
+pytest==8.3.3
+pytest-asyncio==0.24.0
 
 # Production
-gunicorn==21.2.0
+gunicorn==23.0.0
