@@ -1,0 +1,84 @@
+{
+  "name": "veo7-video-platform",
+  "version": "1.0.0",
+  "description": "منصة إنشاء الفيديوهات الناطقة بالذكاء الاصطناعي - A revolutionary AI-powered talking video creation platform",
+  "keywords": [
+    "video",
+    "ai",
+    "text-to-speech",
+    "face-animation",
+    "nextjs",
+    "fastapi",
+    "supabase",
+    "arabic",
+    "multilingual"
+  ],
+  "author": {
+    "name": "VEO7 Team",
+    "email": "support@veo7.com",
+    "url": "https://veo7.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/your-username/VEO7-Video-Platform#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/VEO7-Video-Platform.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/VEO7-Video-Platform/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && source venv/bin/activate && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "build": "npm run build:frontend",
+    "build:frontend": "cd frontend && npm run build",
+    "start": "npm run start:frontend",
+    "start:frontend": "cd frontend && npm start",
+    "test": "npm run test:frontend",
+    "test:frontend": "cd frontend && npm test",
+    "test:backend": "cd backend && python -m pytest",
+    "lint": "npm run lint:frontend",
+    "lint:frontend": "cd frontend && npm run lint",
+    "format": "npm run format:frontend",
+    "format:frontend": "cd frontend && npm run format",
+    "setup": "bash scripts/setup.sh",
+    "deploy": "bash scripts/deploy.sh",
+    "deploy:dev": "bash scripts/deploy.sh development",
+    "deploy:staging": "bash scripts/deploy.sh staging",
+    "deploy:prod": "bash scripts/deploy.sh production",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:clean": "docker-compose down -v --rmi all",
+    "backup": "bash scripts/backup.sh",
+    "restore": "bash scripts/restore.sh",
+    "health": "curl -f http://localhost:8000/health && curl -f http://localhost:3000",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && pip install -r requirements.txt",
+    "clean": "rm -rf node_modules frontend/node_modules frontend/.next frontend/out backend/__pycache__ backend/venv",
+    "reset": "npm run clean && npm run install:all"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3"
+  },
+  "workspaces": [
+    "frontend"
+  ],
+  "private": true,
+  "config": {
+    "frontend_port": 3000,
+    "backend_port": 8000,
+    "database_port": 5432,
+    "redis_port": 6379
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/your-username"
+  }
+}

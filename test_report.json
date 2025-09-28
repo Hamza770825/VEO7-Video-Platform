@@ -1,0 +1,36 @@
+{
+  "timestamp": "2025-09-28 20:26:13",
+  "total_tests": 7,
+  "passed_tests": 7,
+  "success_rate": 100.0,
+  "results": [
+    {
+      "test": "اختبار صحة API",
+      "passed": true
+    },
+    {
+      "test": "اختبار النقطة الرئيسية",
+      "passed": true
+    },
+    {
+      "test": "اختبار صفحة التوثيق",
+      "passed": true
+    },
+    {
+      "test": "اختبار Frontend",
+      "passed": true
+    },
+    {
+      "test": "اختبار خدمة الملفات",
+      "passed": true
+    },
+    {
+      "test": "اختبار خدمة توليد الفيديو",
+      "passed": true
+    },
+    {
+      "test": "اختبار خدمة PayPal",
+      "passed": true
+    }
+  ]
+}

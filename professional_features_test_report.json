@@ -1,0 +1,128 @@
+{
+  "test_summary": {
+    "total_tests": 11,
+    "passed": 11,
+    "failed": 0,
+    "timestamp": "2025-09-28T04:33:02.135539"
+  },
+  "test_results": [
+    {
+      "test_name": "فحص صحة API",
+      "success": true,
+      "message": "API يعمل بحالة: degraded",
+      "timestamp": "2025-09-28T04:32:58.091147",
+      "response_data": {
+        "status": "degraded",
+        "timestamp": "2025-09-28T04:32:58.090156",
+        "services": {
+          "database": "disconnected",
+          "audio": "ready",
+          "video": "ready",
+          "translation": "ready"
+        }
+      }
+    },
+    {
+      "test_name": "البحث في الفيديوهات - أساسي",
+      "success": true,
+      "message": "تم العثور على 5 فيديو",
+      "timestamp": "2025-09-28T04:32:58.594856",
+      "response_data": {
+        "video_count": 5
+      }
+    },
+    {
+      "test_name": "البحث في الفيديوهات - متقدم",
+      "success": true,
+      "message": "البحث المتقدم نجح مع 5 نتيجة",
+      "timestamp": "2025-09-28T04:32:58.598863",
+      "response_data": {
+        "advanced_search_count": 5
+      }
+    },
+    {
+      "test_name": "الفيديوهات الرائجة",
+      "success": true,
+      "message": "تم الحصول على 10 فيديو رائج",
+      "timestamp": "2025-09-28T04:32:59.101883",
+      "response_data": {
+        "trending_count": 10
+      }
+    },
+    {
+      "test_name": "الفيديوهات المقترحة",
+      "success": true,
+      "message": "تم الحصول على 10 فيديو مقترح",
+      "timestamp": "2025-09-28T04:32:59.609022",
+      "response_data": {
+        "recommended_count": 10
+      }
+    },
+    {
+      "test_name": "إعجاب الفيديو",
+      "success": true,
+      "message": "تم الإعجاب بالفيديو (وضع العرض التوضيحي)",
+      "timestamp": "2025-09-28T04:33:00.112768",
+      "response_data": {
+        "liked": true
+      }
+    },
+    {
+      "test_name": "تسجيل مشاهدة الفيديو",
+      "success": true,
+      "message": "تم تسجيل المشاهدة (وضع العرض التوضيحي)",
+      "timestamp": "2025-09-28T04:33:00.113767",
+      "response_data": {
+        "success": true,
+        "message": "تم تسجيل المشاهدة (وضع العرض التوضيحي)"
+      }
+    },
+    {
+      "test_name": "إضافة تعليق",
+      "success": true,
+      "message": "تم إضافة التعليق بنجاح",
+      "timestamp": "2025-09-28T04:33:00.620608",
+      "response_data": {
+        "comment_id": "demo-comment-2366"
+      }
+    },
+    {
+      "test_name": "الحصول على التعليقات",
+      "success": true,
+      "message": "تم الحصول على 5 تعليق",
+      "timestamp": "2025-09-28T04:33:00.624622",
+      "response_data": {
+        "comments_count": 5
+      }
+    },
+    {
+      "test_name": "نظام المتابعة",
+      "success": true,
+      "message": "تم متابعة المستخدم (وضع العرض التوضيحي)",
+      "timestamp": "2025-09-28T04:33:01.130529",
+      "response_data": {
+        "following": true
+      }
+    },
+    {
+      "test_name": "الإحصائيات المحسنة",
+      "success": true,
+      "message": "الإحصائيات المتوفرة: ['success', 'stats']",
+      "timestamp": "2025-09-28T04:33:01.634110",
+      "response_data": {
+        "success": true,
+        "stats": {
+          "total_videos": 5,
+          "total_views": 150,
+          "total_duration": 3600,
+          "credits_used": 5,
+          "credits_remaining": 5,
+          "followers_count": 25,
+          "following_count": 15,
+          "likes_received": 75,
+          "comments_received": 30
+        }
+      }
+    }
+  ]
+}

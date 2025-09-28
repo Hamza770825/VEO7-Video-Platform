@@ -1,0 +1,419 @@
+name: 🚀 CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ===============================
+  # Frontend Tests & Build
+  # ===============================
+  frontend:
+    name: 🎨 Frontend CI
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: 📋 Install dependencies
+      run: npm ci
+      
+    - name: 🔍 Lint code
+      run: npm run lint
+      
+    - name: 🎨 Check formatting
+      run: npm run format:check
+      
+    - name: 🧪 Run tests
+      run: npm run test:ci
+      env:
+        CI: true
+        
+    - name: 📊 Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./frontend/coverage/lcov.info
+        flags: frontend
+        
+    - name: 🏗️ Build application
+      run: npm run build
+      env:
+        NODE_ENV: production
+        
+    - name: 📤 Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: frontend-build
+        path: frontend/.next
+        retention-days: 7
+
+  # ===============================
+  # Backend Tests & Build
+  # ===============================
+  backend:
+    name: 🔧 Backend CI
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: veo7_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        cache-dependency-path: backend/requirements.txt
+        
+    - name: 📋 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+        
+    - name: 🔍 Lint with flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        
+    - name: 🎨 Check formatting with black
+      run: black --check .
+      
+    - name: 🔒 Security check with bandit
+      run: bandit -r . -x tests/
+      
+    - name: 🧪 Run tests with pytest
+      run: |
+        pytest --cov=. --cov-report=xml --cov-report=html
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/veo7_test
+        REDIS_URL: redis://localhost:6379/0
+        SECRET_KEY: test-secret-key
+        
+    - name: 📊 Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/coverage.xml
+        flags: backend
+
+  # ===============================
+  # Security Scanning
+  # ===============================
+  security:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔍 Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: 📤 Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+        
+    - name: 🔐 Run Snyk to check for vulnerabilities
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
+
+  # ===============================
+  # Docker Build & Test
+  # ===============================
+  docker:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: 🏗️ Build Frontend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        push: false
+        tags: veo7/frontend:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: 🏗️ Build Backend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        file: ./backend/Dockerfile
+        push: false
+        tags: veo7/backend:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: 🧪 Test Docker Compose
+      run: |
+        cp .env.example .env
+        docker-compose -f docker-compose.yml config
+        docker-compose -f docker-compose.yml up -d --build
+        sleep 30
+        docker-compose -f docker-compose.yml ps
+        docker-compose -f docker-compose.yml logs
+        docker-compose -f docker-compose.yml down
+
+  # ===============================
+  # Performance Testing
+  # ===============================
+  performance:
+    name: ⚡ Performance Test
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: 📋 Install Lighthouse CI
+      run: npm install -g @lhci/cli@0.12.x
+      
+    - name: 🏗️ Build and start app
+      run: |
+        cd frontend
+        npm ci
+        npm run build
+        npm start &
+        sleep 10
+        
+    - name: 🚀 Run Lighthouse CI
+      run: lhci autorun
+      env:
+        LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+  # ===============================
+  # Deploy to Staging
+  # ===============================
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [frontend, backend, security, docker]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment: staging
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔑 Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+        
+    - name: 🐳 Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+      
+    - name: 🏗️ Build and push Docker images
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY_FRONTEND: veo7/frontend
+        ECR_REPOSITORY_BACKEND: veo7/backend
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # Build and push frontend
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG ./frontend
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG
+        
+        # Build and push backend
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG ./backend
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG
+        
+    - name: 🚀 Deploy to ECS
+      run: |
+        # Update ECS service with new image
+        aws ecs update-service \
+          --cluster veo7-staging \
+          --service veo7-frontend-staging \
+          --force-new-deployment
+          
+        aws ecs update-service \
+          --cluster veo7-staging \
+          --service veo7-backend-staging \
+          --force-new-deployment
+
+  # ===============================
+  # Deploy to Production
+  # ===============================
+  deploy-production:
+    name: 🌟 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [frontend, backend, security, docker]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔑 Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+        
+    - name: 🐳 Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+      
+    - name: 🏗️ Build and push Docker images
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY_FRONTEND: veo7/frontend
+        ECR_REPOSITORY_BACKEND: veo7/backend
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # Build and push frontend
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG ./frontend
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:latest
+        
+        # Build and push backend
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG ./backend
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:latest
+        
+    - name: 🚀 Deploy to ECS
+      run: |
+        # Update ECS service with new image
+        aws ecs update-service \
+          --cluster veo7-production \
+          --service veo7-frontend-production \
+          --force-new-deployment
+          
+        aws ecs update-service \
+          --cluster veo7-production \
+          --service veo7-backend-production \
+          --force-new-deployment
+          
+    - name: 📢 Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Release v${{ github.run_number }}
+        body: |
+          🚀 **تم نشر إصدار جديد من VEO7!**
+          
+          ### التغييرات في هذا الإصدار:
+          ${{ github.event.head_commit.message }}
+          
+          ### معلومات النشر:
+          - **Commit**: ${{ github.sha }}
+          - **التاريخ**: ${{ github.event.head_commit.timestamp }}
+          - **المطور**: ${{ github.event.head_commit.author.name }}
+          
+          ### الروابط:
+          - [Frontend](https://veo7.com)
+          - [API Documentation](https://api.veo7.com/docs)
+          - [Status Page](https://status.veo7.com)
+        draft: false
+        prerelease: false
+
+  # ===============================
+  # Notification
+  # ===============================
+  notify:
+    name: 📢 Notify Team
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: always()
+    
+    steps:
+    - name: 📱 Send Slack notification
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        text: |
+          🚀 **VEO7 Deployment Status**: ${{ job.status }}
+          
+          **Branch**: ${{ github.ref }}
+          **Commit**: ${{ github.sha }}
+          **Author**: ${{ github.actor }}
+          
+          **Frontend**: ${{ needs.frontend.result }}
+          **Backend**: ${{ needs.backend.result }}
+          **Security**: ${{ needs.security.result }}
+          **Docker**: ${{ needs.docker.result }}
+          **Production**: ${{ needs.deploy-production.result }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      if: always()

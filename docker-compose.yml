@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  # قاعدة البيانات PostgreSQL
+  database:
+    image: postgres:15-alpine
+    container_name: veo7-database
+    environment:
+      POSTGRES_DB: veo7
+      POSTGRES_USER: veo7_user
+      POSTGRES_PASSWORD: veo7_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./backend/database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - veo7-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U veo7_user -d veo7"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis للتخزين المؤقت
+  redis:
+    image: redis:7-alpine
+    container_name: veo7-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - veo7-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: veo7-backend
+    environment:
+      - DATABASE_URL=postgresql://veo7_user:veo7_password@database:5432/veo7
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-secret-key-here
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - UPLOAD_DIR=/app/uploads
+      - OUTPUT_DIR=/app/outputs
+      - MAX_FILE_SIZE=104857600
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_outputs:/app/outputs
+      - backend_temp:/app/temp
+    ports:
+      - "8000:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - veo7-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: veo7-frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_APP_NAME=VEO7
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - veo7-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: veo7-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - veo7-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_uploads:
+    driver: local
+  backend_outputs:
+    driver: local
+  backend_temp:
+    driver: local
+
+networks:
+  veo7-network:
+    driver: bridge

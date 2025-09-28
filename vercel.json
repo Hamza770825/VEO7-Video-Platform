@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "name": "veo7-video-platform",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://your-backend-url.com/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "frontend/pages/api/**/*.js": {
+      "maxDuration": 30
+    }
+  }
+}
